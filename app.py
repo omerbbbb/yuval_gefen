@@ -71,7 +71,5 @@ st.pyplot(fig4)
 
 # Footer
 st.markdown("""
----
-**Created by Student for Midterm Project**  
 Based on dataset: amazon_prime_titles.csv
 """)
