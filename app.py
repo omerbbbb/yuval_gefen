@@ -4,72 +4,89 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
-st.title("Amazon Prime Dataset Analysis")
+st.title("Amazon Prime Titles – Data Exploration App")
 
-# Load data
+# Load dataset
 @st.cache_data
 def load_data():
     df = pd.read_csv("amazon_prime_titles.csv")
-    return df
+    df['release_year'] = pd.to_numeric(df['release_year'], errors='coerce')
+    df['duration_clean'] = df['duration'].str.extract('(\d+)').astype(float)
+    df['listed_in'] = df['listed_in'].str.split(', ')
+    return df.explode('listed_in')
 
 df = load_data()
 
-st.markdown("""
-### What is this app?
-This is a simple Streamlit app to explore the Amazon Prime Movies and TV Shows dataset.
-You can scroll and see different visualizations we made during the project.
-""")
+# Sidebar options
+options = [
+    "Release Year",
+    "Type Distribution",
+    "Genres",
+    "TV vs Movie Trends",
+    "Ratings",
+    "Top Directors"
+]
+choice = st.sidebar.radio("Choose a chart to display:", options)
 
-# Dataset preview
-st.subheader("Preview of Dataset")
-st.dataframe(df.head())
+# 1. Release Year Distribution
+if choice == "Release Year":
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.histplot(df['release_year'], bins=30, ax=ax)
+    ax.set_title("Histogram: Release Year")
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Count")
+    st.pyplot(fig)
 
-# Chart 1: Release Year Histogram
-st.subheader("1. Release Year - Histogram")
-fig1, ax1 = plt.subplots(figsize=(10, 4))
-sns.histplot(data=df, x='release_year', bins=30, ax=ax1)
-ax1.set_xlabel("Year")
-ax1.set_ylabel("Count")
-st.pyplot(fig1)
+# 2. Type Distribution
+elif choice == "Type Distribution":
+    fig, ax = plt.subplots(figsize=(5, 4))
+    sns.countplot(data=df, x='type', ax=ax)
+    ax.set_title("Bar Chart: Movie vs TV Show")
+    st.pyplot(fig)
 
-# Chart 2: Top 10 Genres
-st.subheader("2. Top 10 Genres")
-df_genres = df.copy()
-df_genres['listed_in'] = df_genres['listed_in'].str.split(', ')
-df_genres = df_genres.explode('listed_in')
-top_genres = df_genres['listed_in'].value_counts().head(10)
+# 3. Genre Distribution (Top 10)
+elif choice == "Genres":
+    top_genres = df['listed_in'].value_counts().head(10)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.barplot(x=top_genres.index, y=top_genres.values, ax=ax)
+    ax.set_title("Top 10 Genres")
+    ax.set_xlabel("Genre")
+    ax.set_ylabel("Count")
+    ax.tick_params(axis='x', rotation=45)
+    st.pyplot(fig)
 
-fig2, ax2 = plt.subplots(figsize=(10, 4))
-top_genres.plot(kind='bar', ax=ax2)
-ax2.set_xlabel("Genre")
-ax2.set_ylabel("Count")
-st.pyplot(fig2)
+# 4. Percent of TV vs Movie Over Time
+elif choice == "TV vs Movie Trends":
+    df_count = df.groupby(['release_year', 'type']).size().reset_index(name='count')
+    df_count['total'] = df_count.groupby('release_year')['count'].transform('sum')
+    df_count['percent'] = df_count['count'] / df_count['total'] * 100
+    df_count = df_count[df_count['release_year'] >= 1980]
 
-# Chart 3: Ratings (messy)
-st.subheader("3. Rating - All Types")
-fig3, ax3 = plt.subplots(figsize=(10, 4))
-ratings_sorted = sorted(df['rating'].dropna().unique())
-sns.countplot(data=df[df['rating'].notna()], x='rating', order=ratings_sorted, ax=ax3)
-ax3.set_xlabel("Rating")
-ax3.set_ylabel("Count")
-plt.xticks(rotation=45)
-st.pyplot(fig3)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.barplot(data=df_count, x='release_year', y='percent', hue='type', ax=ax)
+    ax.set_title("Percent of Movies and TV Shows by Year")
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Percent")
+    ax.tick_params(axis='x', rotation=45)
+    st.pyplot(fig)
 
-# Chart 4: TV vs Movie Percent per Year
-st.subheader("4. Percent of Movies and TV Shows per Year")
-year_type_counts = df.groupby(['release_year', 'type']).size().reset_index(name='count')
-year_type_counts['total'] = year_type_counts.groupby('release_year')['count'].transform('sum')
-year_type_counts['percent'] = year_type_counts['count'] / year_type_counts['total'] * 100
-year_type_counts = year_type_counts[year_type_counts['release_year'] >= 1980]
+# 5. Rating Distribution (Messy)
+elif choice == "Ratings":
+    fig, ax = plt.subplots(figsize=(12, 5))
+    rating_order = sorted(df['rating'].dropna().unique())
+    sns.countplot(data=df[df['rating'].notna()], x='rating', order=rating_order, ax=ax)
+    ax.set_title("Rating Distribution")
+    ax.set_xlabel("Rating")
+    ax.set_ylabel("Count")
+    ax.tick_params(axis='x', rotation=45)
+    st.pyplot(fig)
 
-fig4, ax4 = plt.subplots(figsize=(12, 4))
-sns.barplot(data=year_type_counts, x='release_year', y='percent', hue='type', ax=ax4)
-ax4.set_xlabel("Release Year")
-ax4.set_ylabel("Percent")
-plt.xticks(rotation=45)
-st.pyplot(fig4)
-
-# Footer
-st.markdown("""
-Based on dataset: amazon_prime_titles.csv
-""")
+# 6. Top 10 Directors
+elif choice == "Top Directors":
+    top_directors = df['director'].dropna().value_counts().head(10)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(x=top_directors.values, y=top_directors.index, ax=ax)
+    ax.set_title("Top 10 Directors")
+    ax.set_xlabel("Number of Titles")
+    ax.set_ylabel("Director")
+    st.pyplot(fig)
