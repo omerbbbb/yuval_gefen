@@ -3,16 +3,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Load data
-@st.cache_data
-def load_data():
-    url = 'https://drive.google.com/uc?export=download&id=1Uiu4B5CDo61gNVEDbeu64AhZySaBR8o'
-    df = pd.read_csv(url)
-    df['listed_in'] = df['listed_in'].str.split(', ')
-    df = df.explode('listed_in')
-    df['release_year'] = pd.to_numeric(df['release_year'], errors='coerce')
-    return df
-
+df = pd.read_csv("amazon_prime_titles.csv")
 df = load_data()
 
 # Sidebar filters
