@@ -4,7 +4,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 df = pd.read_csv("amazon_prime_titles.csv")
-df = load_data()
 
 # Sidebar filters
 st.sidebar.title("Filters")
